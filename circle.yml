@@ -5,6 +5,8 @@ test:
         - mbed toolchain -G GCC_ARM
         - mbed target -G K64F
         - mbed config -G protocol ssh
+        - mbed cache purge
+        - mbed cache ls
         - cd .tests && mbed new new-test
         - cd .tests/new-test && mbed ls
         - cd .tests/new-test && mbed releases -r
@@ -22,6 +24,7 @@ test:
         - cd .tests/bld-test/mbed && mbed update 85 --clean
         - cd .tests/bld-test && mbed update --clean
         - cd .tests/bld-test && mbed compile -m LPC1768 -j 0
+        - mbed cache ls
         - cd .tests && mbed new supported-tests
         - |-
             cd .tests/supported-tests
@@ -71,6 +74,7 @@ test:
             mbed toolchain -S
             mbed target -S
             mbed export -S
+        - mbed cache purge
 
 
 

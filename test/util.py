@@ -216,3 +216,7 @@ def testrepos(mbed, request):
 
     return test1, test2, test3, test4
 
+# Different repository scms
+@pytest.fixture(params=['git', 'hg', 'bld'])
+def testscm(mbed, request):
+    return request.param
