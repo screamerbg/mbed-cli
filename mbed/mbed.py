@@ -33,7 +33,6 @@ from urlparse import urlparse
 import urllib2
 import zipfile
 import argparse
-import tempfile
 
 
 # Application version
@@ -257,7 +256,7 @@ def rmtree_readonly(directory):
         shutil.rmtree(directory, onerror=remove_readonly)
 
 def sizeof_fmt(num, suffix='B'):
-    for unit in ['','K','M','G','T','P','E','Z']:
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0
@@ -294,14 +293,14 @@ def staticclass(cls):
 
 # Handling for multiple version controls
 scms = {}
-def scm(name):
+def scmdec(name):
     def _scm(cls):
         scms[name] = cls()
         return cls
     return _scm
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
-@scm('bld')
+@scmdec('bld')
 @staticclass
 class Bld(object):
     name = 'bld'
@@ -424,7 +423,7 @@ class Bld(object):
 
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
-@scm('hg')
+@scmdec('hg')
 @staticclass
 class Hg(object):
     name = 'hg'
@@ -647,7 +646,7 @@ class Hg(object):
 
 
 # pylint: disable=no-self-argument, no-method-argument, no-member, no-self-use, unused-argument
-@scm('git')
+@scmdec('git')
 @staticclass
 class Git(object):
     name = 'git'
@@ -1191,7 +1190,7 @@ class Repo(object):
         sorted_scms = sorted(sorted_scms, key=lambda (m, _): not m)
 
         for _, scm in sorted_scms:
-            main = True
+            do_clone = True
             cache = self.get_cache(url, scm.name)
 
             # Try to clone with cache ref first
@@ -1211,14 +1210,14 @@ class Repo(object):
                         if not rev:
                             rev = scm.default_branch
                         scm.update(rev, True)
-                        main = False
+                        do_clone = False
                 except (ProcessException, IOError):
                     info("Discarding cached repository")
                     if os.path.isdir(path):
                         rmtree_readonly(path)
 
             # Main clone routine if the clone with cache ref failed (might occur if cache ref is dirty)
-            if main:
+            if do_clone:
                 try:
                     scm.clone(url, path, depth=depth, protocol=protocol, **kwargs)
                 except ProcessException:
@@ -1587,7 +1586,7 @@ class Program(object):
 
     def detect_target(self, info=None):
         targets = self.get_detected_targets()
-        if targets == False:
+        if targets is False:
             error("The target detection requires that the 'mbed-ls' python module is installed.\nYou can install mbed-ls by running 'pip install mbed-ls'.", 1)
         elif len(targets) > 1:
             error("Multiple targets were detected.\nOnly 1 target board should be connected to your system.", 1)
@@ -1927,7 +1926,7 @@ def import_(url, path=None, ignore=False, depth=None, protocol=None, top=True):
         error("Directory \"%s\" is not empty. Please ensure that the destination folder is empty." % repo.path, 1)
 
     if not Repo.isurl(orig_url) and os.path.exists(orig_url):
-            warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
+        warning("Importing from a local folder \"%s\", not from a URL" % orig_url)
 
     text = "Importing program" if top else "Adding library"
     action("%s \"%s\" from \"%s\"%s" % (text, relpath(cwd_root, repo.path), formaturl(repo.url, protocol), ' at '+(repo.revtype(repo.rev))))
@@ -2734,7 +2733,7 @@ def config_(var=None, value=None, global_cfg=False, unset=False, list_config=Fal
         else:
             # Find the root of the program
             program = Program(getcwd())
-            if program.is_cwd and not var == 'ROOT':
+            if program.is_cwd and var != 'ROOT':
                 error(
                     "Could not find mbed program in current path \"%s\".\n"
                     "Change the current directory to a valid mbed program, set the current directory as an mbed program with 'mbed config root .', or use the '--global' option to set global configuration." % program.path)
@@ -2820,14 +2819,13 @@ def cache_(on=False, off=False, dir=None, ls=False, purge=False, global_cfg=Fals
     elif cmd == 'ls':
         def get_size_(path):
             size = 0
-            for dirpath, dirs, files in os.walk(path):
+            for dirpath, _, files in os.walk(path):
                 for f in files:
                     size += os.path.getsize(os.path.join(dirpath, f))
             return size
         action("Listing cached repositories in \"%s\"" % cfg['cache_base'])
-        repos = []
         total_size = 0
-        for dirpath, dirs, files in os.walk(cfg['cache_dir']):
+        for dirpath, dirs, _ in os.walk(cfg['cache_dir']):
             dirs[:] = [d for d in dirs  if not d.startswith('.')]
             if Repo.isrepo(dirpath):
                 repo = Repo().fromrepo(dirpath)
